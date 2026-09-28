@@ -329,12 +329,23 @@ FROM fat_vendedor;
 
 -- 4. Variação de faturamento de um mês para o outro por vendedor (LAG).
 WITH fat_mensal AS (
-    SELECT i.seller_id, DATE_TRUNC('month', o.order_purchase_timestamp) AS mes, SUM(i.price) AS total_mes
+    SELECT 
+        i.seller_id,
+        DATE_TRUNC('month', o.order_purchase_timestamp::timestamp) AS mes,
+        SUM(i.price) AS total_faturado
     FROM olist_order_items_dataset i
     JOIN olist_orders_dataset o ON i.order_id = o.order_id
-    GROUP BY i.seller_id, DATE_TRUNC('month', o.order_purchase_timestamp)
+    GROUP BY 
+        i.seller_id, 
+        DATE_TRUNC('month', o.order_purchase_timestamp::timestamp)
 )
-SELECT seller_id, mes, total_mes,
-    LAG(total_mes) OVER(PARTITION BY seller_id ORDER BY mes) AS mes_anterior,
-    total_mes - LAG(total_mes) OVER(PARTITION BY seller_id ORDER BY mes) AS variacao_absoluta
-FROM fat_mensal;
+SELECT 
+    seller_id,
+    mes,
+    total_faturado,
+    LAG(total_faturado) OVER (PARTITION BY seller_id ORDER BY mes) AS faturamento_mes_anterior,
+    total_faturado - LAG(total_faturado) OVER (PARTITION BY seller_id ORDER BY mes) AS variacao_faturamento
+FROM fat_mensal
+ORDER BY 
+    seller_id, 
+    mes;
